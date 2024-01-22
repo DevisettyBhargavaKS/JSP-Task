@@ -9,6 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class TaskController extends HttpServlet {
@@ -29,16 +30,31 @@ public class TaskController extends HttpServlet {
             String description = req.getParameter("description");
             Task temporaryTask = new Task(taskName, description);
             temporaryTaskList.add(temporaryTask);
-            req.setAttribute("temporaryTask", temporaryTask);
+            req.setAttribute("temporaryTasks", temporaryTaskList);
         } else if ("Delete".equals(action)) {
-            int taskId = Integer.parseInt(req.getParameter("taskId"));
-            taskDao.deleteTask(taskId);
+            String[] taskIds = req.getParameterValues("checkboxName");
+            if (taskIds != null) {
+                for (String taskIdStr : taskIds) {
+                    int taskId = Integer.parseInt(taskIdStr);
+
+                    // Use an iterator to safely remove items from the list
+                    Iterator<Task> iterator = temporaryTaskList.iterator();
+                    while (iterator.hasNext()) {
+                        Task temporaryTask = iterator.next();
+                        if (temporaryTask.getId() == taskId) {
+                            iterator.remove();
+                            break;  // Exit the loop after deleting the task
+                        }
+                    }
+                }
+            }
         } else if ("Save".equals(action)) {
             for (Task temporaryTask : temporaryTaskList) {
                 taskDao.addTask(temporaryTask.getTaskName(), temporaryTask.getDescription());
             }
             temporaryTaskList.clear();
         }
+
         List<Task> taskList = taskDao.getTask();
         req.setAttribute("tasks", taskList);
         req.getRequestDispatcher("index.jsp").forward(req, resp);
